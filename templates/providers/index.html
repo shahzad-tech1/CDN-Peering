@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Providers — EdgePeer IX-Fabric{% endblock %}
+
+{% block content %}
+<div class="page-inner">
+
+  {# ---- Page Header ---- #}
+  <div class="page-header">
+    <div class="page-header__title-group">
+      <div style="display:flex;align-items:center;gap:var(--space-xs);" class="font-label-sm text-outline tracking-wider uppercase">
+        <span>EdgePeer</span><span>/</span><span>Consortium</span><span>/</span>
+        <span class="text-primary font-medium">BGP-DIRECTORY</span>
+      </div>
+      <div class="page-header__title">
+        <h1>Providers</h1>
+        <span class="page-header__badge">{{ total_active }} ASNs</span>
+      </div>
+      <p class="page-header__subtitle">CDN interconnect directory &amp; policy rules</p>
+    </div>
+    <div class="page-header__actions">
+      <button class="btn btn-primary" data-modal-open="providerModal">
+        <span class="material-symbols-outlined">add</span>
+        <span>Register Provider</span>
+      </button>
+    </div>
+  </div>
+
+  {# ---- KPI Summary Strip ---- #}
+  <div class="stat-grid stat-grid--4">
+    <div class="stat-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;" class="font-body-sm text-outline">
+        <span>Active CDNs</span>
+        <span class="material-symbols-outlined text-secondary" style="font-size:16px;">hub</span>
+      </div>
+      <div style="margin-top:var(--space-sm);display:flex;align-items:baseline;gap:var(--space-xs);">
+        <span class="stat-card__value">{{ total_active }}</span>
+        <span class="font-label-sm text-outline">/ {{ provider_stats|length }} total</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;" class="font-body-sm text-outline">
+        <span>Configured Policies</span>
+        <span class="material-symbols-outlined text-primary" style="font-size:16px;">alt_route</span>
+      </div>
+      <div style="margin-top:var(--space-sm);display:flex;align-items:baseline;gap:var(--space-xs);">
+        <span class="stat-card__value">{{ total_policies }}</span>
+        <span class="font-label-sm text-secondary">Active Rules</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;" class="font-body-sm text-outline">
+        <span>Egress Throughput</span>
+        <span class="material-symbols-outlined text-secondary" style="font-size:16px;">speed</span>
+      </div>
+      <div style="margin-top:var(--space-sm);display:flex;align-items:baseline;gap:var(--space-xs);">
+        <span class="stat-card__value">{{ "%.1f"|format(total_egress) }}</span>
+        <span class="font-label-sm font-semibold">Gbps</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;" class="font-body-sm text-outline">
+        <span>Peering Health</span>
+        <span class="material-symbols-outlined text-secondary" style="font-size:16px;">verified</span>
+      </div>
+      <div style="margin-top:var(--space-sm);display:flex;align-items:baseline;gap:var(--space-xs);">
+        <span class="stat-card__value">99.98%</span>
+        <span class="font-label-sm text-secondary">SLA</span>
+      </div>
+    </div>
+  </div>
+
+  {# ---- Provider Cards Grid ---- #}
+  <div class="provider-grid">
+    {% for ps in provider_stats %}
+    {% set p = ps.provider %}
+    <div class="provider-card">
+      <div>
+        {# Card Header #}
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-sm);margin-bottom:var(--space-xs);">
+          <div style="display:flex;align-items:center;gap:var(--space-sm);">
+            <span class="font-headline-sm font-semibold">{{ p.name }}</span>
+            {% if p.asn %}
+            <span class="font-code" style="padding:2px var(--space-xs);border-radius:var(--rounded);background:var(--surface-container-high);color:var(--on-surface-variant);font-size:12px;">{{ p.asn }}</span>
+            {% endif %}
+          </div>
+          {% if p.status == 'active' %}
+          <span class="badge badge--active" style="gap:4px;padding:2px 6px;">
+            <span style="width:6px;height:6px;border-radius:50%;background:var(--secondary);"></span>
+            <span>Active</span>
+          </span>
+          {% else %}
+          <span class="badge badge--neutral" style="gap:4px;padding:2px 6px;">
+            <span style="width:6px;height:6px;border-radius:50%;background:var(--outline);"></span>
+            <span>{{ p.status|capitalize }}</span>
+          </span>
+          {% endif %}
+        </div>
+
+        {# Resource Meta #}
+        <div class="provider-card__meta">
+          <span>{{ "%.0f"|format(ps.total_cpu) }} Cores</span>
+          <span style="color:var(--outline-variant);">•</span>
+          <span>{{ "%.0f"|format(ps.total_storage) }} GB</span>
+          <span style="color:var(--outline-variant);">•</span>
+          <span class="font-medium">{{ "%.1f"|format(ps.total_download) }} Gbps egress</span>
+        </div>
+
+        {# Policy Tags #}
+        <div class="provider-card__tags">
+          {% if ps.policy %}
+          <span class="provider-card__tag">Min CPU: {{ "%.0f"|format(ps.policy.min_cpu_available) }}</span>
+          <span class="provider-card__tag">Max Delegated: {{ "%.0f"|format(ps.policy.max_delegated_pct) }}%</span>
+          <span class="provider-card__tag">Rate Cap: {{ ps.policy.max_request_rate }}/s</span>
+          {% else %}
+          <span class="provider-card__tag">No policy configured</span>
+          {% endif %}
+          <span class="provider-card__tag">{{ ps.resource_count }} Resources</span>
+        </div>
+      </div>
+
+      {# Card Footer #}
+      <div class="provider-card__footer">
+        <button class="btn" style="color:var(--primary);padding:4px 8px;font-size:13px;font-weight:500;" data-modal-open="policyModal-{{ p.id }}">Manage Policies</button>
+        <a href="{{ url_for('resources.index') }}" class="btn btn-sm btn-secondary" style="display:flex;align-items:center;gap:4px;">
+          <span>Resources ({{ ps.resource_count }})</span>
+          <span class="material-symbols-outlined" style="font-size:14px;">arrow_forward</span>
+        </a>
+      </div>
+    </div>
+
+    {# Policy Modal for this provider #}
+    <div class="modal-overlay" id="policyModal-{{ p.id }}">
+      <div class="modal">
+        <div class="modal__header">
+          <div>
+            <div class="modal__title">Policy — {{ p.name }}</div>
+            <div class="modal__subtitle">Configure peering policy rules (R3)</div>
+          </div>
+          <button class="modal__close" data-modal-close="policyModal-{{ p.id }}">
+            <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+          </button>
+        </div>
+        <form action="{{ url_for('providers.update_policy', id=p.id) }}" method="POST" data-validate>
+          <div class="modal__body">
+            <div class="form-group">
+              <label class="form-label">Min CPU Available (vCPU)</label>
+              <input type="number" name="min_cpu_available" class="form-input form-input--code"
+                     value="{{ "%.0f"|format(ps.policy.min_cpu_available) if ps.policy else '10' }}" min="0" step="1" required>
+              <span class="font-label-sm text-muted" style="margin-top:2px;">Minimum CPU that must remain available for peering</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Max Delegated Percentage (%)</label>
+              <input type="number" name="max_delegated_pct" class="form-input form-input--code"
+                     value="{{ "%.0f"|format(ps.policy.max_delegated_pct) if ps.policy else '30' }}" min="0" max="100" step="1" required>
+              <span class="font-label-sm text-muted" style="margin-top:2px;">Max % of resources that can be delegated to peers</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Max Request Rate (req/s)</label>
+              <input type="number" name="max_request_rate" class="form-input form-input--code"
+                     value="{{ ps.policy.max_request_rate if ps.policy else '15000' }}" min="1000" step="100" required>
+              <span class="font-label-sm text-muted" style="margin-top:2px;">Requests above this rate are flagged as malicious (R7)</span>
+            </div>
+          </div>
+          <div class="modal__footer">
+            <button type="button" class="btn btn-secondary" data-modal-close="policyModal-{{ p.id }}">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Policy</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ---- Bottom Bar ---- #}
+  <div class="card" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-md);">
+    <div style="display:flex;align-items:center;gap:var(--space-sm);">
+      <span class="material-symbols-outlined text-secondary" style="font-size:18px;">verified_user</span>
+      <span class="font-body-sm">Autonomous Route Damping &amp; RPKI Prefix Validation: <span class="font-medium text-secondary">Active across all {{ total_active }} providers</span></span>
+    </div>
+  </div>
+</div>
+
+{# ---- Register Provider Modal ---- #}
+<div class="modal-overlay" id="providerModal">
+  <div class="modal">
+    <div class="modal__header">
+      <div>
+        <div class="modal__title">Register Provider</div>
+        <div class="modal__subtitle">Add a new CDN provider to the directory</div>
+      </div>
+      <button class="modal__close" data-modal-close="providerModal">
+        <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+      </button>
+    </div>
+    <form action="{{ url_for('providers.create') }}" method="POST" data-validate>
+      <div class="modal__body">
+        <div class="form-group">
+          <label class="form-label">Provider Name</label>
+          <input type="text" name="name" class="form-input" placeholder="e.g. Cloudflare Edge" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ASN</label>
+          <input type="text" name="asn" class="form-input form-input--code" placeholder="e.g. ASN 13335">
+        </div>
+      </div>
+      <div class="modal__footer">
+        <button type="button" class="btn btn-secondary" data-modal-close="providerModal">Cancel</button>
+        <button type="submit" class="btn btn-primary">Register</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

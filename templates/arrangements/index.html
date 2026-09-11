@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}Arrangements — EdgePeer IX-Fabric{% endblock %}
+
+{% block content %}
+<div class="page-inner">
+
+  {# ---- Page Header ---- #}
+  <div class="page-header">
+    <div class="page-header__title-group">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="font-label-sm uppercase tracking-wider text-primary font-medium">Interconnect Ledger</span>
+        <span class="font-code text-outline" style="font-size:11px;">v4.18-bgp</span>
+      </div>
+      <div class="page-header__title"><h1>Peering Arrangements</h1></div>
+      <p class="page-header__subtitle">Bilateral interconnection contracts &amp; egress accounting units</p>
+    </div>
+    <div class="page-header__actions">
+      <a href="{{ url_for('arrangements.index') }}" class="btn btn-secondary">
+        <span class="material-symbols-outlined">sync</span>
+        <span>Sync Routes</span>
+      </a>
+    </div>
+  </div>
+
+  {# ---- 4 KPI Cards ---- #}
+  <div class="stat-grid stat-grid--4">
+    <div class="stat-card" style="gap:4px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="font-label-sm uppercase tracking-wider text-muted">Active Treaties</span>
+        <span class="material-symbols-outlined" style="font-size:14px;color:var(--primary);">hub</span>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px;">
+        <span class="stat-card__value" style="font-size:36px;">{{ active_count }}</span>
+        <span class="font-label-sm text-muted">/ {{ total_count }} provisioned</span>
+      </div>
+      <div class="progress progress--thin" style="margin-top:8px;">
+        <div class="progress__fill progress__fill--primary" style="width:{% if total_count > 0 %}{{ (active_count / total_count * 100)|int }}{% else %}0{% endif %}%;"></div>
+      </div>
+    </div>
+
+    <div class="stat-card" style="gap:4px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="font-label-sm uppercase tracking-wider text-muted">Transit Units</span>
+        <span class="material-symbols-outlined" style="font-size:14px;color:var(--secondary);">swap_calls</span>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px;">
+        <span class="stat-card__value" style="font-size:36px;">{{ "%.0f"|format(total_units) }}</span>
+        <span class="font-label-sm text-secondary font-medium">TU total</span>
+      </div>
+      <div class="progress progress--thin" style="margin-top:8px;">
+        <div class="progress__fill progress__fill--secondary" style="width:{% if total_units > 0 %}78{% else %}0{% endif %}%;"></div>
+      </div>
+    </div>
+
+    <div class="stat-card" style="gap:4px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="font-label-sm uppercase tracking-wider text-muted">Avg Latency</span>
+        <span class="material-symbols-outlined" style="font-size:14px;color:var(--primary);">speed</span>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px;">
+        <span class="stat-card__value" style="font-size:36px;">14.2<span style="font-size:16px;font-weight:400;">ms</span></span>
+      </div>
+      <div class="progress progress--thin" style="margin-top:8px;">
+        <div class="progress__fill progress__fill--primary" style="width:42%;"></div>
+      </div>
+    </div>
+
+    <div class="stat-card" style="gap:4px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="font-label-sm uppercase tracking-wider text-muted">Fallback Engine</span>
+        <span class="material-symbols-outlined" style="font-size:14px;color:var(--tertiary);">shield</span>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px;">
+        <span class="font-headline-lg font-semibold">Rule #3</span>
+        <span class="badge badge--neutral">Active</span>
+      </div>
+      <div class="font-code text-muted truncate" style="margin-top:8px;">Auto-drain &gt; 35ms breach</div>
+    </div>
+  </div>
+
+  {# ---- Active Treaties Table ---- #}
+  <div class="data-table-wrap">
+    <div class="data-table-header">
+      <div class="data-table-header__title">
+        <h2>Active Treaties</h2>
+        <span class="page-header__badge">{{ arrangements|length }} Records</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:var(--space-xs);" class="font-label-sm text-muted">
+        <span class="material-symbols-outlined" style="font-size:16px;">history</span>
+        <span>Ledger snapshot</span>
+      </div>
+    </div>
+    <div class="data-table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Primary CDN</th>
+            <th>Peer CDN</th>
+            <th>Status</th>
+            <th>Accounting Units (TU)</th>
+            <th>Created</th>
+            <th style="text-align:right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for arr in arrangements %}
+          <tr{% if arr.status == 'disbanded' %} style="opacity:0.7;"{% endif %}>
+            <td class="data-table__id">ARR-{{ arr.id }}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:24px;height:24px;border-radius:var(--rounded);background:var(--surface-container);display:flex;align-items:center;justify-content:center;" class="font-code font-semibold text-primary" style="font-size:11px;">{{ arr.primary_provider.name[:2]|upper }}</div>
+                <div style="display:flex;flex-direction:column;">
+                  <span class="font-body-sm font-medium">{{ arr.primary_provider.name }}</span>
+                  <span class="font-label-sm font-code text-muted">{{ arr.primary_provider.asn or 'N/A' }}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:24px;height:24px;border-radius:var(--rounded);background:rgba(172,237,255,0.2);display:flex;align-items:center;justify-content:center;" class="font-code font-semibold text-secondary" style="font-size:11px;">{{ arr.peer_provider.name[:2]|upper }}</div>
+                <div style="display:flex;flex-direction:column;">
+                  <span class="font-body-sm font-medium">{{ arr.peer_provider.name }}</span>
+                  <span class="font-label-sm font-code text-muted">{{ arr.peer_provider.asn or 'N/A' }}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              {% if arr.status == 'active' %}
+              <span class="badge badge--active"><span class="badge__dot"></span> Active</span>
+              {% elif arr.status == 'disbanded' %}
+              <span class="badge badge--disbanded"><span class="badge__dot"></span> Disbanded</span>
+              {% elif arr.status == 'rearranged' %}
+              <span class="badge badge--rearranged"><span class="badge__dot"></span> Rearranged</span>
+              {% else %}
+              <span class="badge badge--neutral"><span class="badge__dot"></span> {{ arr.status|capitalize }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <div style="display:flex;flex-direction:column;gap:4px;width:176px;">
+                <div style="display:flex;justify-content:space-between;" class="font-code font-label-sm">
+                  <span class="font-medium">{{ "%.0f"|format(arr.accounting_units) }}</span>
+                  <span class="text-muted">/ {{ "%.0f"|format(arr.max_accounting_units) }}</span>
+                </div>
+                {% set pct = (arr.accounting_units / arr.max_accounting_units * 100) if arr.max_accounting_units > 0 else 0 %}
+                <div class="progress progress--thin">
+                  <div class="progress__fill {% if arr.status == 'disbanded' %}progress__fill--error{% elif pct > 80 %}progress__fill--container{% else %}progress__fill--primary{% endif %}" style="width:{{ pct|int }}%;"></div>
+                </div>
+              </div>
+            </td>
+            <td class="font-label-sm text-muted">{{ arr.created_at.strftime('%b %d') }}</td>
+            <td style="text-align:right;">
+              {% if arr.status == 'active' %}
+              <div style="display:inline-flex;align-items:center;gap:6px;">
+                {# Add Accounting #}
+                <form action="{{ url_for('arrangements.add_accounting', id=arr.id) }}" method="POST" style="display:inline-flex;align-items:center;gap:4px;">
+                  <input type="number" name="units" class="form-input form-input--code" placeholder="250" min="1" style="width:64px;height:24px;font-size:11px;" required>
+                  <button type="submit" class="btn btn-sm btn-secondary" style="height:24px;">+TU</button>
+                </form>
+                {# Evaluate #}
+                <form action="{{ url_for('arrangements.evaluate', id=arr.id) }}" method="POST" style="display:inline;">
+                  <button type="submit" class="btn btn-sm btn-secondary" style="height:24px;">Evaluate</button>
+                </form>
+                {# Disband #}
+                <form action="{{ url_for('arrangements.disband', id=arr.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Disband ARR-{{ arr.id }}?');">
+                  <button type="submit" class="btn btn-sm" style="height:24px;color:var(--error);padding:4px 8px;font-size:11px;">Disband</button>
+                </form>
+              </div>
+              {% elif arr.status == 'disbanded' %}
+              <span class="font-code font-label-sm" style="padding:2px 8px;border-radius:var(--rounded);background:var(--surface-container-high);color:var(--on-surface-variant);">Terminated</span>
+              {% elif arr.status == 'rearranged' %}
+              <span class="font-code font-label-sm text-primary font-medium" style="padding:2px 8px;border-radius:var(--rounded);background:var(--surface-container-high);">Shifted</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+
+          {% if not arrangements %}
+          <tr><td colspan="7" class="text-muted" style="text-align:center;padding:24px;">No arrangements yet. Accept a peering request to create one.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# ---- Two Column: Audit Log + Treaty Specs ---- #}
+  <div class="grid-12">
+    {# Left: Lifecycle Audit Log #}
+    <div class="col-span-7">
+      <div class="card" style="display:flex;flex-direction:column;gap:var(--space-md);">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:var(--space-xs);">
+            <span class="material-symbols-outlined text-primary" style="font-size:18px;">timeline</span>
+            <span class="font-headline-sm">Lifecycle Audit Log</span>
+          </div>
+          <span class="font-code font-label-sm text-muted">Recent Activity</span>
+        </div>
+        <div class="timeline">
+          {% for log in logs %}
+          <div class="timeline__item">
+            <div class="timeline__dot {% if log.action == 'rejected' or log.action == 'disbanded' %}timeline__dot--warn{% elif log.action == 'accepted' or log.action == 'accounting' %}timeline__dot--success{% else %}timeline__dot--primary{% endif %}">
+              {{ loop.index }}
+            </div>
+            <div class="timeline__content">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="font-body-sm font-medium">{{ log.action|capitalize }}</span>
+                <span class="font-label-sm" style="padding:2px 8px;border-radius:var(--rounded-full);background:var(--surface-container);color:var(--on-surface-variant);">{{ log.message[:40] }}{% if log.message|length > 40 %}…{% endif %}</span>
+              </div>
+              <span class="font-code font-label-sm text-muted">{{ log.created_at.strftime('%H:%M:%S') }} UTC</span>
+            </div>
+          </div>
+          {% endfor %}
+          {% if not logs %}
+          <div style="text-align:center;padding:16px;color:var(--on-surface-variant);" class="font-body-sm">No audit log entries yet.</div>
+          {% endif %}
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-top:var(--space-xs);" class="font-label-sm text-muted">
+          <span style="display:flex;align-items:center;gap:4px;">
+            <span style="width:6px;height:6px;border-radius:50%;background:var(--secondary);"></span>
+            Telemetry pipeline verified
+          </span>
+          <span class="font-code">Latency overhead: 0.12ms</span>
+        </div>
+      </div>
+    </div>
+
+    {# Right: Treaty Specs #}
+    <div class="col-span-5">
+      <div class="card" style="display:flex;flex-direction:column;gap:var(--space-md);justify-content:space-between;height:100%;">
+        <div style="display:flex;flex-direction:column;gap:var(--space-xs);">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span class="font-headline-sm">Treaty Specs &amp; Rules</span>
+          </div>
+          <p class="font-body-sm text-muted">Cross-connect parameters and breach triggers</p>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <span class="font-label-sm uppercase tracking-wider text-muted font-medium">Termination Conditions</span>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-radius:var(--rounded);background:var(--surface-container-low);" class="font-body-sm">
+            <span>Latency Breach</span>
+            <span class="font-code font-medium">&gt; 35ms</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-radius:var(--rounded);background:var(--surface-container-low);" class="font-body-sm">
+            <span>Packet Loss</span>
+            <span class="font-code font-medium">&gt; 1.5%</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-radius:var(--rounded);background:var(--surface-container-low);" class="font-body-sm">
+            <span>Under-utilization</span>
+            <span class="font-code font-medium">&lt; 15% (30m)</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-radius:var(--rounded);background:var(--surface-container-low);" class="font-body-sm">
+            <span>Max Accounting Units</span>
+            <span class="font-code font-medium">50,000 TU</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

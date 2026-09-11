@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}EdgePeer IX-Fabric{% endblock %}</title>
+  <meta name="description" content="CDN Peering Management Console — EdgePeer IX-Fabric">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+</head>
+<body>
+  <div class="app-shell">
+
+    {# ---- Sidebar Backdrop (mobile) ---- #}
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+    {# ---- Sidebar ---- #}
+    <aside class="sidebar" id="sidebar">
+      <div>
+        {# Brand #}
+        <div class="sidebar__brand">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <rect width="28" height="28" rx="6" fill="#2563eb"/>
+            <path d="M8 14h4l2-4 2 6 2-2h4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div>
+            <div class="sidebar__brand-name">EdgePeer</div>
+            <div class="sidebar__brand-sub">IX-Fabric</div>
+          </div>
+        </div>
+
+        {# Navigation #}
+        <div class="sidebar__section-label">Console</div>
+        <nav class="sidebar__nav">
+          <a href="{{ url_for('dashboard.index') }}"
+             class="sidebar__nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+            <span class="material-symbols-outlined">grid_view</span>
+            <span>Dashboard</span>
+          </a>
+          <a href="{{ url_for('resources.index') }}"
+             class="sidebar__nav-item {% if active_page == 'resources' %}active{% endif %}">
+            <span class="material-symbols-outlined">hub</span>
+            <span>Resources</span>
+          </a>
+          <a href="{{ url_for('peering.index') }}"
+             class="sidebar__nav-item {% if active_page == 'peering' %}active{% endif %}">
+            <span class="material-symbols-outlined">call_split</span>
+            <span>Peering Requests</span>
+          </a>
+          <a href="{{ url_for('arrangements.index') }}"
+             class="sidebar__nav-item {% if active_page == 'arrangements' %}active{% endif %}">
+            <span class="material-symbols-outlined">handshake</span>
+            <span>Arrangements</span>
+          </a>
+          <a href="{{ url_for('providers.index') }}"
+             class="sidebar__nav-item {% if active_page == 'providers' %}active{% endif %}">
+            <span class="material-symbols-outlined">lan</span>
+            <span>Providers</span>
+          </a>
+        </nav>
+      </div>
+
+      {# Sidebar Footer #}
+      <div class="sidebar__footer">
+        <div class="sidebar__status">
+          <span class="pulse-dot"></span>
+          <span>Mesh Stable</span>
+        </div>
+        <span class="sidebar__version">v4.18</span>
+      </div>
+    </aside>
+
+    {# ---- Main Content Wrapper ---- #}
+    <div class="main-wrapper">
+
+      {# Header #}
+      <header class="header">
+        <div class="header__left">
+          <button class="hamburger" id="hamburger-btn" aria-label="Menu">
+            <span class="material-symbols-outlined">menu</span>
+          </button>
+          <div class="header__breadcrumb">
+            <span>EdgePeer</span>
+            <span class="header__breadcrumb-sep">/</span>
+            <span class="header__breadcrumb-current">Consortium</span>
+          </div>
+          <div class="header__env-badge">
+            <span class="header__env-dot"></span>
+            <span>Production</span>
+          </div>
+        </div>
+        <div class="header__right">
+          <div class="header__search">
+            <span class="material-symbols-outlined header__search-icon">search</span>
+            <input type="text" class="header__search-input" placeholder="Search ASN, peer, port...">
+          </div>
+          <div class="header__divider"></div>
+          <div class="header__profile">
+            <div class="header__profile-img" style="background:var(--primary-fixed);display:flex;align-items:center;justify-content:center;color:var(--primary);font-weight:600;font-size:13px;">KV</div>
+            <div class="header__profile-info">
+              <span class="header__profile-name">K. Vance</span>
+              <span class="header__profile-role">NetOps Lead</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {# Page Content #}
+      <main class="page-content">
+        {# Flash Messages #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="toast-banner toast-banner--{{ category }}" style="margin:var(--gutter-lg) var(--gutter-lg) 0;">
+                <div style="display:flex;align-items:center;gap:var(--space-sm);">
+                  <span class="material-symbols-outlined" style="font-size:18px;">
+                    {% if category == 'success' %}check_circle{% elif category == 'error' %}error{% else %}info{% endif %}
+                  </span>
+                  <span class="font-body-sm" style="font-weight:500;">{{ message }}</span>
+                </div>
+                <button data-dismiss-toast aria-label="Dismiss" class="btn-ghost" style="padding:4px;">
+                  <span class="material-symbols-outlined" style="font-size:16px;">close</span>
+                </button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+      </main>
+
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}500 — Internal Error{% endblock %}
+{% block content %}
+<div class="page-inner" style="display:flex;align-items:center;justify-content:center;min-height:60vh;">
+  <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:var(--space-lg);">
+    <div style="font-size:72px;font-weight:600;color:var(--error);font-family:'Geist',sans-serif;line-height:1;letter-spacing:-0.03em;">500</div>
+    <div class="font-headline-md" style="color:var(--on-surface);">Fabric Core Error</div>
+    <p class="font-body-md text-muted" style="max-width:360px;">An unexpected internal fault occurred in the IX-Fabric engine. The incident has been logged for investigation.</p>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary" style="margin-top:var(--space-sm);">
+      <span class="material-symbols-outlined">arrow_back</span>
+      <span>Return to Dashboard</span>
+    </a>
+  </div>
+</div>
+{% endblock %}

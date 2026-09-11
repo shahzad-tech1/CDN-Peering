@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% block title %}Resources — EdgePeer IX-Fabric{% endblock %}
+
+{% block content %}
+<div class="page-inner">
+
+  {# ---- Page Header ---- #}
+  <div class="page-header">
+    <div class="page-header__title-group">
+      <div class="page-header__title">
+        <h1>Resources</h1>
+        <span class="page-header__badge">IXP Cluster 04</span>
+      </div>
+      <p class="page-header__subtitle">Registered compute &amp; edge routing nodes across peering fabrics.</p>
+    </div>
+    <div class="page-header__actions">
+      <div style="position:relative;display:flex;align-items:center;">
+        <select onchange="window.location.href='{{ url_for('resources.index') }}?status='+this.value" class="form-select" style="padding-left:32px;">
+          <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All States</option>
+          <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active Only</option>
+          <option value="alert" {% if status_filter == 'alert' %}selected{% endif %}>Alerts</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" data-modal-open="registerModal">
+        <span class="material-symbols-outlined">add</span>
+        <span>Register Resource</span>
+      </button>
+    </div>
+  </div>
+
+  {# ---- Summary Stats ---- #}
+  <div class="stat-grid stat-grid--3">
+    <div class="stat-card" style="flex-direction:row;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:var(--space-md);">
+        <div class="icon-box icon-box--primary"><span class="material-symbols-outlined">dns</span></div>
+        <div>
+          <div class="font-label-sm uppercase tracking-wider text-muted font-medium">Compute Fabric</div>
+          <div class="font-headline-md font-semibold">{{ total_active }} Active Nodes</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;" class="font-label-sm text-secondary font-medium">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--secondary-container);"></span>
+        <span>{% if total_active > 0 %}Online{% else %}No nodes{% endif %}</span>
+      </div>
+    </div>
+
+    <div class="stat-card" style="flex-direction:row;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:var(--space-md);">
+        <div class="icon-box icon-box--primary"><span class="material-symbols-outlined">speed</span></div>
+        <div>
+          <div class="font-label-sm uppercase tracking-wider text-muted font-medium">Total Throughput</div>
+          <div class="font-headline-md font-semibold">{{ "%.0f"|format(total_download) }} Gbps Bandwidth</div>
+        </div>
+      </div>
+      <span class="font-label-sm text-muted" style="background:var(--surface-container);padding:2px 8px;border-radius:var(--rounded);">Peak {{ "%.0f"|format(total_download * 1.05) }}G</span>
+    </div>
+
+    <div class="stat-card" style="flex-direction:row;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:var(--space-md);">
+        <div class="icon-box icon-box--error"><span class="material-symbols-outlined">sync_problem</span></div>
+        <div>
+          <div class="font-label-sm uppercase tracking-wider text-muted font-medium">Sync Telemetry</div>
+          <div class="font-headline-md font-semibold {% if total_alert > 0 %}text-error{% endif %}">{{ total_alert }} Sync Alert{{ 's' if total_alert != 1 }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ---- Resources Table ---- #}
+  <div class="data-table-wrap">
+    <div class="data-table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Node ID</th>
+            <th>CDN Provider</th>
+            <th>Cores</th>
+            <th>Storage</th>
+            <th>Upload / Download</th>
+            <th>Status</th>
+            <th style="text-align:right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in resources %}
+          <tr{% if r.status != 'active' %} style="background:rgba(255,218,214,0.1);"{% endif %}>
+            <td class="data-table__id">{{ r.resource_id }}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:var(--space-sm);">
+                <span style="width:8px;height:8px;border-radius:50%;background:{% if r.status == 'active' %}var(--secondary){% else %}var(--error){% endif %};"></span>
+                <span class="font-body-sm font-medium">{{ r.provider.name }}</span>
+              </div>
+            </td>
+            <td class="font-body-sm text-muted">{{ "%.0f"|format(r.cpu) }} vCPU</td>
+            <td class="font-body-sm text-muted">{{ "%.0f"|format(r.storage_gb) }} GB</td>
+            <td>
+              <span class="data-table__mono text-muted">{{ "%.0f"|format(r.upload_rate) }}G</span>
+              <span class="text-outline"> / </span>
+              <span class="data-table__mono font-medium">{{ "%.0f"|format(r.download_rate) }}G</span>
+            </td>
+            <td>
+              {% if r.status == 'active' %}
+              <span class="badge badge--active"><span class="badge__dot"></span> Active</span>
+              {% else %}
+              <span class="badge badge--error"><span class="badge__dot"></span> {{ r.status|capitalize }}</span>
+              {% endif %}
+            </td>
+            <td style="text-align:right;">
+              <div style="display:inline-flex;align-items:center;gap:4px;">
+                <button class="btn-ghost" style="padding:4px;" data-modal-open="editModal-{{ r.id }}" title="Edit Resource">
+                  <span class="material-symbols-outlined" style="font-size:16px;">edit</span>
+                </button>
+                <form action="{{ url_for('resources.delete', id=r.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete {{ r.resource_id }}?');">
+                  <button type="submit" class="btn-ghost" style="padding:4px;color:var(--on-surface-variant);" title="Delete Resource">
+                    <span class="material-symbols-outlined" style="font-size:16px;">delete</span>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+
+          {# Edit Modal for this resource #}
+          <div class="modal-overlay" id="editModal-{{ r.id }}">
+            <div class="modal">
+              <div class="modal__header">
+                <div>
+                  <div class="modal__title">Edit {{ r.resource_id }}</div>
+                  <div class="modal__subtitle">Update compute edge routing node</div>
+                </div>
+                <button class="modal__close" data-modal-close="editModal-{{ r.id }}">
+                  <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+                </button>
+              </div>
+              <form action="{{ url_for('resources.edit', id=r.id) }}" method="POST" data-validate>
+                <div class="modal__body">
+                  <div class="form-group">
+                    <label class="form-label">Provider</label>
+                    <select name="provider_id" class="form-select" required>
+                      {% for p in providers %}
+                      <option value="{{ p.id }}" {% if p.id == r.provider_id %}selected{% endif %}>{{ p.name }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">CPU Cores (vCPU)</label>
+                    <input type="number" name="cpu" class="form-input form-input--code" value="{{ "%.0f"|format(r.cpu) }}" min="1" required>
+                  </div>
+                  <div class="two-col">
+                    <div class="form-group">
+                      <label class="form-label">Storage (GB)</label>
+                      <input type="number" name="storage_gb" class="form-input form-input--code" value="{{ "%.0f"|format(r.storage_gb) }}" min="1" required>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Upload Rate (Gbps)</label>
+                      <input type="number" name="upload_rate" class="form-input form-input--code" value="{{ "%.0f"|format(r.upload_rate) }}" min="1" required>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Download Rate (Gbps)</label>
+                    <input type="number" name="download_rate" class="form-input form-input--code" value="{{ "%.0f"|format(r.download_rate) }}" min="1" required>
+                  </div>
+                </div>
+                <div class="modal__footer">
+                  <button type="button" class="btn btn-secondary" data-modal-close="editModal-{{ r.id }}">Cancel</button>
+                  <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+
+          {% if not resources %}
+          <tr><td colspan="7" class="text-muted" style="text-align:center;padding:24px;">No resources found. Register one to get started.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+    <div class="data-table-footer">
+      <span>Showing {{ resources|length }} of {{ pagination.total }} nodes</span>
+      <div class="data-table-footer__pagination">
+        {% if pagination.has_prev %}
+        <a href="{{ url_for('resources.index', page=pagination.prev_num, status=status_filter) }}" class="pagination-btn">
+          <span class="material-symbols-outlined" style="font-size:14px;">chevron_left</span>
+        </a>
+        {% else %}
+        <button class="pagination-btn" disabled><span class="material-symbols-outlined" style="font-size:14px;">chevron_left</span></button>
+        {% endif %}
+        <span class="font-label-sm" style="padding:0 8px;">{{ pagination.page }} / {{ pagination.pages or 1 }}</span>
+        {% if pagination.has_next %}
+        <a href="{{ url_for('resources.index', page=pagination.next_num, status=status_filter) }}" class="pagination-btn">
+          <span class="material-symbols-outlined" style="font-size:14px;">chevron_right</span>
+        </a>
+        {% else %}
+        <button class="pagination-btn" disabled><span class="material-symbols-outlined" style="font-size:14px;">chevron_right</span></button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# ---- Register Resource Modal ---- #}
+<div class="modal-overlay" id="registerModal">
+  <div class="modal">
+    <div class="modal__header">
+      <div>
+        <div class="modal__title">Register Resource</div>
+        <div class="modal__subtitle">New compute edge routing node</div>
+      </div>
+      <button class="modal__close" data-modal-close="registerModal">
+        <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+      </button>
+    </div>
+    <form action="{{ url_for('resources.create') }}" method="POST" data-validate>
+      <div class="modal__body">
+        <div class="form-group">
+          <label class="form-label">Resource ID</label>
+          <input type="text" class="form-input form-input--code" value="{{ next_resource_id }}" disabled>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Provider</label>
+          <select name="provider_id" class="form-select" required>
+            {% for p in providers %}
+            <option value="{{ p.id }}">{{ p.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">CPU Cores (vCPU)</label>
+          <input type="number" name="cpu" class="form-input form-input--code" placeholder="e.g. 64" min="1" required>
+        </div>
+        <div class="two-col">
+          <div class="form-group">
+            <label class="form-label">Storage (GB)</label>
+            <input type="number" name="storage_gb" class="form-input form-input--code" placeholder="e.g. 48000" min="1" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Upload Rate (Gbps)</label>
+            <input type="number" name="upload_rate" class="form-input form-input--code" placeholder="e.g. 80" min="1" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Download Rate (Gbps)</label>
+          <input type="number" name="download_rate" class="form-input form-input--code" placeholder="e.g. 80" min="1" required>
+        </div>
+      </div>
+      <div class="modal__footer">
+        <button type="button" class="btn btn-secondary" data-modal-close="registerModal">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Resource</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

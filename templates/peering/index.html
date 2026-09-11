@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% block title %}Peering Requests — EdgePeer IX-Fabric{% endblock %}
+
+{% block content %}
+<div class="page-inner">
+
+  {# ---- Page Header ---- #}
+  <div class="page-header">
+    <div class="page-header__title-group">
+      <div style="display:flex;align-items:center;gap:var(--space-xs);" class="font-label-sm text-primary uppercase tracking-wider">
+        <span class="material-symbols-outlined" style="font-size:16px;">alt_route</span>
+        <span>Bilateral IX-Fabric Gateway</span>
+      </div>
+      <div class="page-header__title">
+        <h1>Peering Requests</h1>
+      </div>
+      <p class="page-header__subtitle">Simulate traffic loads &amp; evaluate automated bilateral agreements</p>
+    </div>
+    <div class="page-header__actions">
+      <div style="display:flex;align-items:center;gap:var(--space-lg);background:var(--surface-container-low);padding:var(--space-sm);border-radius:var(--rounded-xl);">
+        <div style="display:flex;flex-direction:column;padding:0 var(--space-xs);">
+          <span class="font-label-sm text-muted uppercase">SLA Conformity</span>
+          <div style="display:flex;align-items:baseline;gap:4px;">
+            <span class="font-headline-sm">99.82%</span>
+            <span class="font-label-sm text-secondary">Optimal</span>
+          </div>
+        </div>
+        <div style="width:1px;height:24px;background:var(--surface-container-highest);"></div>
+        <div style="display:flex;flex-direction:column;padding:0 var(--space-xs);">
+          <span class="font-label-sm text-muted uppercase">Queue</span>
+          <div style="display:flex;align-items:baseline;gap:4px;">
+            <span class="font-headline-sm">{{ count_pending }}</span>
+            <span class="font-label-sm text-muted">pending</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ---- Two Column Layout ---- #}
+  <div class="grid-12" style="align-items:start;">
+
+    {# Left: Simulator #}
+    <div class="col-span-5">
+      <div class="card" style="position:relative;overflow:hidden;display:flex;flex-direction:column;gap:var(--space-lg);">
+        {# Top accent #}
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(to right, var(--primary), var(--secondary-container), var(--secondary));"></div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:var(--space-xs);">
+          <div style="display:flex;align-items:center;gap:var(--space-xs);">
+            <span class="material-symbols-outlined text-primary" style="font-size:20px;">tune</span>
+            <span class="font-headline-sm">Load Simulator &amp; Policy Trigger</span>
+          </div>
+          <span style="padding:2px 8px;border-radius:var(--rounded);background:var(--surface-container-high);" class="font-code text-primary">SANDBOX</span>
+        </div>
+
+        <form action="{{ url_for('peering.simulate') }}" method="POST" data-validate style="display:flex;flex-direction:column;gap:var(--space-lg);">
+
+          {# Origin Provider #}
+          <div class="form-group">
+            <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
+              <span>Origin Node &amp; Region</span>
+            </label>
+            <select name="provider_id" class="form-select" required>
+              {% for p in providers %}
+              <option value="{{ p.id }}">{{ p.name }}{% if p.asn %} ({{ p.asn }}){% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          {# Target Provider #}
+          <div class="form-group">
+            <label class="form-label">Target Cross-Connect</label>
+            <select name="target_provider_id" class="form-select" required>
+              {% for p in providers %}
+              <option value="{{ p.id }}">{{ p.name }}{% if p.asn %} ({{ p.asn }}){% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          {# Load Slider #}
+          <div class="form-group" style="padding-top:var(--space-xs);">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <label class="form-label">Simulated Ingress Load</label>
+              <div style="display:flex;align-items:baseline;gap:4px;">
+                <span class="font-headline-sm" id="load-display" style="color:var(--tertiary);">82</span>
+                <span class="font-label-sm">%</span>
+                <span class="badge badge--pending" id="load-badge">Caution</span>
+              </div>
+            </div>
+            <input type="range" name="load_pct" id="load-slider" min="0" max="100" value="82" style="width:100%;accent-color:var(--primary);">
+            <div style="display:flex;justify-content:space-between;padding:4px 4px 0;" class="font-label-sm text-muted">
+              <div style="display:flex;align-items:center;gap:4px;">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--secondary);"></span>
+                <span>Safe (&lt;70%)</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:4px;">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--tertiary);"></span>
+                <span>Caution (70-85%)</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:4px;">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--error);"></span>
+                <span>Critical (&gt;85%)</span>
+              </div>
+            </div>
+          </div>
+
+          {# Request Rate #}
+          <div class="form-group">
+            <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
+              <span>Traffic Volume Rate</span>
+              <span class="font-code text-muted">Policy Ceiling: 15,000 req/s</span>
+            </label>
+            <div style="position:relative;display:flex;align-items:center;">
+              <input type="number" name="request_rate" class="form-input form-input--code" value="12450" min="1000" max="30000" step="50" required style="width:100%;padding-right:50px;">
+              <div style="position:absolute;right:8px;pointer-events:none;" class="font-label-sm text-muted">req/s</div>
+            </div>
+          </div>
+
+          {# SVG Sparkline #}
+          <div style="background:var(--surface-container-low);padding:var(--space-sm);border-radius:var(--rounded);display:flex;flex-direction:column;gap:var(--space-xs);">
+            <div style="display:flex;align-items:center;justify-content:space-between;" class="font-label-sm text-muted">
+              <span>SYN / ACK Envelope Model</span>
+              <span class="font-code text-primary">Jitter: ±0.3ms</span>
+            </div>
+            <svg style="width:100%;height:40px;overflow:visible;" fill="none" preserveAspectRatio="none" viewBox="0 0 320 40">
+              <path d="M0,35 Q20,32 40,25 T80,28 T120,18 T160,22 T200,10 T240,14 T280,6 L320,12" stroke="#2563eb" stroke-width="2" stroke-linecap="round"/>
+              <path d="M0,35 Q20,32 40,25 T80,28 T120,18 T160,22 T200,10 T240,14 T280,6 L320,12 L320,40 L0,40 Z" fill="#2563eb" fill-opacity="0.08"/>
+              <circle cx="280" cy="6" r="3" fill="#2563eb" class="animate-pulse"/>
+            </svg>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" style="padding:10px;font-size:16px;font-weight:600;">
+            <span class="material-symbols-outlined" style="font-size:18px;">bolt</span>
+            <span>Trigger Simulation</span>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    {# Right: Evaluation Queue #}
+    <div class="col-span-7" style="display:flex;flex-direction:column;gap:var(--space-md);">
+      <div class="card" style="display:flex;flex-direction:column;gap:var(--space-lg);">
+
+        {# Queue Header with Filters #}
+        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-md);">
+          <div style="display:flex;align-items:center;gap:var(--space-xs);">
+            <span class="material-symbols-outlined" style="font-size:20px;">playlist_play</span>
+            <span class="font-headline-sm">Evaluation Queue &amp; Decisions</span>
+          </div>
+          <div class="filter-tabs" data-target="#request-list">
+            <a href="{{ url_for('peering.index', status='all') }}" class="filter-tab {% if status_filter == 'all' %}active{% endif %}">All ({{ count_all }})</a>
+            <a href="{{ url_for('peering.index', status='pending') }}" class="filter-tab {% if status_filter == 'pending' %}active{% endif %}">Pending ({{ count_pending }})</a>
+            <a href="{{ url_for('peering.index', status='accepted') }}" class="filter-tab {% if status_filter == 'accepted' %}active{% endif %}">Accepted ({{ count_accepted }})</a>
+            <a href="{{ url_for('peering.index', status='rejected') }}" class="filter-tab {% if status_filter == 'rejected' %}active{% endif %}">Rejected ({{ count_rejected }})</a>
+          </div>
+        </div>
+
+        {# Request Cards List #}
+        <div style="display:flex;flex-direction:column;gap:var(--space-sm);" id="request-list">
+          {% for req in requests %}
+          <div class="request-card" data-status="{{ req.status }}">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-md);">
+              {# Left: Request Info #}
+              <div style="display:flex;flex-direction:column;gap:var(--space-xxs);min-width:0;">
+                <div style="display:flex;align-items:center;gap:var(--space-xs);">
+                  <span class="font-code font-semibold {% if req.status == 'rejected' %}text-error{% elif req.status == 'accepted' %}{% else %}text-primary{% endif %}">REQ-{{ req.id }}</span>
+                  <span class="font-code text-outline">|</span>
+                  <div style="display:flex;align-items:center;gap:4px;" class="font-body-sm font-medium">
+                    <span>{{ req.provider.name }}</span>
+                    <span class="material-symbols-outlined text-muted" style="font-size:12px;">arrow_forward</span>
+                    <span>{{ req.target_provider.name if req.target_provider else 'N/A' }}</span>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:var(--space-md);" class="font-label-sm text-muted">
+                  <div style="display:flex;align-items:center;gap:4px;">
+                    <span>Load:</span>
+                    <span class="font-code font-medium {% if req.load_pct > 85 %}text-error{% elif req.load_pct > 70 %}text-tertiary{% else %}text-secondary{% endif %}">{{ "%.0f"|format(req.load_pct) }}%</span>
+                    <div style="width:48px;height:6px;background:var(--surface-container-highest);border-radius:var(--rounded-full);overflow:hidden;display:inline-block;margin-left:2px;">
+                      <div style="height:100%;width:{{ req.load_pct }}%;background:{% if req.load_pct > 85 %}var(--error){% elif req.load_pct > 70 %}var(--tertiary){% else %}var(--secondary){% endif %};border-radius:var(--rounded-full);"></div>
+                    </div>
+                  </div>
+                  <span>•</span>
+                  <div style="display:flex;align-items:center;gap:4px;">
+                    <span>Throughput:</span>
+                    <span class="font-code font-medium {% if req.request_rate > 15000 %}text-error{% endif %}">{{ "%.1f"|format(req.request_rate / 1000) }}k req/s</span>
+                  </div>
+                </div>
+              </div>
+
+              {# Right: Status + Action #}
+              <div style="display:flex;align-items:center;gap:var(--space-md);flex-shrink:0;">
+                {% if req.status == 'pending' %}
+                <span class="badge badge--pending"><span class="badge__dot" style="animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></span> Pending Arb</span>
+                <form action="{{ url_for('peering.evaluate', id=req.id) }}" method="POST">
+                  <button type="submit" class="btn btn-primary btn-sm">
+                    <span>Evaluate</span>
+                    <span class="material-symbols-outlined" style="font-size:12px;">play_arrow</span>
+                  </button>
+                </form>
+                {% elif req.status == 'accepted' %}
+                <span class="badge badge--active"><span class="badge__dot"></span> Accepted</span>
+                {% elif req.status == 'rejected' %}
+                <span class="badge badge--error"><span class="badge__dot"></span> Rejected</span>
+                {% endif %}
+              </div>
+            </div>
+
+            {% if req.status == 'rejected' and req.reject_reason %}
+            <div class="font-code" style="font-size:11px;color:var(--error);padding-top:2px;">
+              ⚠ {{ req.reject_reason }}
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+
+          {% if not requests %}
+          <div style="text-align:center;padding:32px;color:var(--on-surface-variant);">
+            No peering requests yet. Use the simulator to create one.
+          </div>
+          {% endif %}
+        </div>
+
+        {# Queue Footer #}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-top:var(--space-xs);" class="font-label-sm text-muted">
+          <span style="display:flex;align-items:center;gap:4px;">
+            <span class="material-symbols-outlined" style="font-size:12px;" class="text-secondary">verified_user</span>
+            Policy engine synchronized across all active interfaces
+          </span>
+          <span class="font-code">{{ requests|length }} total</span>
+        </div>
+      </div>
+
+      {# Bottom Insight Cards #}
+      <div class="stat-grid stat-grid--3">
+        <div class="card" style="display:flex;flex-direction:column;gap:4px;">
+          <span class="font-label-sm text-muted uppercase">Interconnect Ports</span>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span class="font-headline-sm">{{ count_accepted }} Active</span>
+            <span class="material-symbols-outlined text-secondary" style="font-size:18px;">check_circle</span>
+          </div>
+          <div class="progress progress--thin"><div class="progress__fill progress__fill--secondary" style="width:100%;"></div></div>
+        </div>
+        <div class="card" style="display:flex;flex-direction:column;gap:4px;">
+          <span class="font-label-sm text-muted uppercase">Pending Evaluations</span>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span class="font-headline-sm" style="color:var(--tertiary);">{{ count_pending }}</span>
+            <span class="material-symbols-outlined" style="font-size:18px;color:var(--tertiary);">network_check</span>
+          </div>
+          <div class="progress progress--thin"><div class="progress__fill progress__fill--tertiary" style="width:{% if count_all > 0 %}{{ (count_pending / count_all * 100)|int }}{% else %}0{% endif %}%;"></div></div>
+        </div>
+        <div class="card" style="display:flex;flex-direction:column;gap:4px;">
+          <span class="font-label-sm text-muted uppercase">Rejection Rate</span>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span class="font-headline-sm">{% if count_all > 0 %}{{ "%.1f"|format(count_rejected / count_all * 100) }}%{% else %}0%{% endif %}</span>
+            <span class="material-symbols-outlined text-secondary" style="font-size:18px;">shield</span>
+          </div>
+          <div class="progress progress--thin"><div class="progress__fill progress__fill--secondary" style="width:{% if count_all > 0 %}{{ (count_rejected / count_all * 100)|int }}{% else %}0{% endif %}%;"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
