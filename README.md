@@ -7,7 +7,7 @@
 
 > **Course:** SE3002 — Software Quality Engineering  
 > **Assignment:** Assignment #01: Quality Evaluation of AI-Generated Software  
-> **Group Members:** Shahzad Ahmad (24I-3090) & Maham Munir (21I-1213) | **Section:** SE-5B  
+> **Group Members:** Shahzad Ahmad (24I-3090) & Maham Munir (21I-1231) | **Section:** SE-5B  
 > **Repository:** [https://github.com/shahzad-tech1/CDN-Peering](https://github.com/shahzad-tech1/CDN-Peering)
 
 ---
